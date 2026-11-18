@@ -1,6 +1,6 @@
 {
   "name": "matterbridge-rgbww-led-controller",
-  "version": "1.1.0",
+  "version": "1.1.1-beta.0",
   "description": "Matterbridge plugin for ESP RGBWW LED controllers",
   "author": "Roman Schlich",
   "license": "Apache-2.0",
