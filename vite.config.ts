@@ -24,6 +24,8 @@ export default defineConfig({
       '**/vendor/',
     ],
     globals: true,
+    // Several device tests wait for real fades (debounce, fade, grace time), slow CI runners need more than the 5 s default.
+    testTimeout: 15_000,
     clearMocks: false,
     restoreMocks: false,
     environment: 'node',
