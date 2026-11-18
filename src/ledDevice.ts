@@ -286,8 +286,7 @@ export class RgbwwLedDevice {
     }
     if (error === undefined) {
       await this.onRequestSucceeded();
-      clearTimeout(this.refreshTimer);
-      this.refreshTimer = setTimeout(() => void this.refresh(), Math.max(0, this.suppressRemoteUntil - Date.now()));
+      this.scheduleSettlingPoll();
       return;
     }
     if (this.sendAttempt < MAX_SEND_ATTEMPTS) {
@@ -297,6 +296,23 @@ export class RgbwwLedDevice {
       this.endpoint.log.error(`Set color failed after ${MAX_SEND_ATTEMPTS} attempts: ${errorMessage(error)}`);
     }
     await this.onRequestFailed();
+  }
+
+  /**
+   * Poll the color once the own fade is done.
+   *
+   * Timers can fire a few milliseconds before a deadline computed with `Date.now()`: on Linux the event loop
+   * clock has a coarse resolution. A poll that early would be dropped as a fade value, so the poll is scheduled
+   * again until the deadline has really passed.
+   */
+  private scheduleSettlingPoll(): void {
+    clearTimeout(this.refreshTimer);
+    const remainingMs = this.suppressRemoteUntil - Date.now();
+    if (remainingMs > 0) {
+      this.refreshTimer = setTimeout(() => this.scheduleSettlingPoll(), remainingMs);
+      return;
+    }
+    void this.refresh();
   }
 
   /** Poll the current color from the controller. Skipped while a command is being sent. */
