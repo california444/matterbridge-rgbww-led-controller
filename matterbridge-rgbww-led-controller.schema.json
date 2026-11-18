@@ -1,0 +1,96 @@
+{
+  "title": "Matterbridge RGBWW LED Controller",
+  "description": "matterbridge-rgbww-led-controller v. 1.0.0 by Roman Schlich",
+  "type": "object",
+  "properties": {
+    "name": {
+      "title": "Plugin Name",
+      "description": "Plugin name",
+      "type": "string",
+      "readOnly": true,
+      "ui:widget": "hidden"
+    },
+    "type": {
+      "title": "Plugin Type",
+      "description": "Plugin type",
+      "type": "string",
+      "readOnly": true,
+      "ui:widget": "hidden"
+    },
+    "devices": {
+      "title": "LED Controllers",
+      "description": "ESP RGBWW LED controllers to expose as Matter lights.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "description": "Device name shown in the Matter controller.",
+            "type": "string",
+            "default": "LED-Strip"
+          },
+          "hostName": {
+            "title": "IP Address / Hostname",
+            "description": "IP address or host name of the LED controller.",
+            "type": "string",
+            "default": "192.168.0.100"
+          }
+        },
+        "required": ["name", "hostName"]
+      }
+    },
+    "transitionMs": {
+      "title": "Transition Time (ms)",
+      "description": "Fade duration for color and brightness changes.",
+      "type": "integer",
+      "minimum": 0,
+      "default": 600
+    },
+    "useEventServer": {
+      "title": "Use Event Server",
+      "description": "Receive state changes instantly from the controller's JSON-RPC event server (TCP port 9090). Falls back to polling when the server is not available.",
+      "type": "boolean",
+      "default": true
+    },
+    "pollIntervalSeconds": {
+      "title": "Poll Interval (s)",
+      "description": "Interval for reading the controller state via HTTP.",
+      "type": "integer",
+      "minimum": 10,
+      "default": 300
+    },
+    "whiteList": {
+      "title": "White List",
+      "description": "Only the devices in the list will be exposed. If the list is empty, all the devices will be exposed.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "selectFrom": "name"
+    },
+    "blackList": {
+      "title": "Black List",
+      "description": "The devices in the list will not be exposed. If the list is empty, no devices will be excluded.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "selectFrom": "name"
+    },
+    "debug": {
+      "title": "Enable Debug",
+      "description": "Enable debug mode for the plugin. Only for debugging purposes, not recommended for production use.",
+      "type": "boolean",
+      "default": false
+    },
+    "unregisterOnShutdown": {
+      "title": "Unregister On Shutdown",
+      "description": "Unregister all devices on shutdown. Only for debugging purposes, not recommended for production use.",
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

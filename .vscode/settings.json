@@ -1,0 +1,21 @@
+{
+  "eslint.enable": false,
+  "prettier.enable": false,
+  "oxc.enable": true,
+  "js/ts.experimental.useTsgo": true,
+  "editor.tabSize": 2,
+  "editor.rulers": [180],
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "editor.codeActionsOnSave": {
+    "source.format.oxc": "always",
+    "source.fixAll.oxc": "always"
+  },
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "search.exclude": {
+    "**/dist": true,
+    "**/.cache": true,
+    "**/coverage": true
+  }
+}

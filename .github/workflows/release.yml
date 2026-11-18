@@ -1,0 +1,130 @@
+# Release flow taken from california444/homebridge-hap-homematic.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  # Re-publish an existing tag to npm, e.g. to the beta channel or after a
+  # failed publish. Lives in this file because npm trusted publishing is bound
+  # to a single workflow filename.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Git tag to publish (e.g. v0.2.0)'
+        required: true
+        type: string
+      channel:
+        description: 'npm dist-tag'
+        required: true
+        type: choice
+        default: latest
+        options:
+          - latest
+          - beta
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/build.yml
+
+  release:
+    needs: ci
+    if: github.repository == 'california444/matterbridge-rgbww-led-controller'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # all tags
+
+      # The version in package.json decides: a PR that raises it (npm version
+      # <patch|minor|major> --no-git-tag-version) releases on merge. If the
+      # tag already exists, nothing happens.
+      - name: Create tag and GitHub release for a new version
+        id: tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "$TAG already exists: no release."
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          PRERELEASE=()
+          if echo "$VERSION" | grep -q -- '-'; then PRERELEASE=(--prerelease); fi
+          # Creates the tag on this commit; notes list the merged PRs since
+          # the previous release.
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes "${PRERELEASE[@]}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+  npm:
+    needs: release
+    # always(): on workflow_dispatch the release job is skipped, which would
+    # otherwise skip this job too.
+    # The job only runs once the repository variable NPM_PUBLISH is set to "true".
+    if: >-
+      always() &&
+      github.repository == 'california444/matterbridge-rgbww-led-controller' &&
+      vars.NPM_PUBLISH == 'true' &&
+      (
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+        (needs.release.result == 'success' && needs.release.outputs.tag != '')
+      )
+    # Waits for approval by a required reviewer of the "npm" environment.
+    environment: npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC for npm trusted publishing (and provenance)
+
+    env:
+      TAG: ${{ inputs.tag || needs.release.outputs.tag }}
+      # Prereleases (1.0.0-beta.1) go to "beta" unless chosen otherwise.
+      CHANNEL: ${{ inputs.channel || (contains(needs.release.outputs.tag, '-') && 'beta') || 'latest' }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+
+      # Node 24: npm trusted publishing needs npm >= 11.5.1.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+          # npm download cache, keyed by package-lock.json; npm ci still
+          # verifies every package against the lockfile hashes.
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check version against the tag
+        run: |
+          VERSION="${TAG#v}"
+          if [ "$CHANNEL" = "latest" ] && echo "$VERSION" | grep -q -- '-'; then
+            echo "Refusing to publish a prerelease version to latest: $VERSION" >&2
+            exit 1
+          fi
+          CURRENT=$(node -p "require('./package.json').version")
+          if [ "$CURRENT" != "$VERSION" ]; then
+            echo "package.json has $CURRENT but the tag is $TAG" >&2
+            exit 1
+          fi
+
+      # prepack runs the production build (dist/ is not in git).
+      - name: Publish to npm
+        run: npm publish --provenance --access public --tag "$CHANNEL"

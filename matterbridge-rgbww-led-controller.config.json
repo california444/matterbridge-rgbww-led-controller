@@ -1,0 +1,12 @@
+{
+  "name": "matterbridge-rgbww-led-controller",
+  "type": "DynamicPlatform",
+  "devices": [],
+  "transitionMs": 600,
+  "useEventServer": true,
+  "pollIntervalSeconds": 300,
+  "whiteList": [],
+  "blackList": [],
+  "debug": false,
+  "unregisterOnShutdown": false
+}
